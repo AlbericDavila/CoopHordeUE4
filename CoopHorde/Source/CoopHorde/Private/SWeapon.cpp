@@ -29,6 +29,15 @@ ASWeapon::ASWeapon()
 	TracerTargetName = "Target";
 
 	BaseDamage = 20;
+	RateOfFire = 600;
+}
+
+
+void ASWeapon::BeginPlay()
+{
+	Super::BeginPlay();
+
+	TimeBetweenShots = 60 / RateOfFire;
 }
 
 
@@ -99,7 +108,25 @@ void ASWeapon::Fire()
 		}
 		
 		PlayFireEffects(TracerEndPoint);
+
+		LastFireTime = GetWorld()->TimeSeconds;
 	}
+}
+
+
+void ASWeapon::StartFire()
+{
+	float FirstDelay = LastFireTime + TimeBetweenShots - GetWorld()->TimeSeconds;
+	if (FirstDelay < 0) FirstDelay = 0;
+
+	// Execute function every 1 sec
+	GetWorldTimerManager().SetTimer(TimerHandle_TimeBetweenShots, this, &ASWeapon::Fire, TimeBetweenShots, true, 0);
+}
+
+
+void ASWeapon::StopFire()
+{
+	GetWorldTimerManager().ClearTimer(TimerHandle_TimeBetweenShots);
 }
 
 
