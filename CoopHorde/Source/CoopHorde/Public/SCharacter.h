@@ -5,12 +5,14 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
 #include "SWeapon.h"
+#include "SHealthComponent.h"
 #include "SCharacter.generated.h"
 
 
 class UCameraComponent;
 class USpringArmComponent;
 class ASWeapon;
+class USHealthComponent;
 
 UCLASS()
 class COOPHORDE_API ASCharacter : public ACharacter
@@ -47,6 +49,8 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 	USpringArmComponent* SpringArmComp;
 
+	USHealthComponent* HealthComp;
+
 	bool bWantsToZoom;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Player")
@@ -57,6 +61,10 @@ protected:
 
 	// Set during begin play
 	float DefaultFOV;
+
+	// Player died previously
+	UPROPERTY(BlueprintReadOnly, Category = "Player")
+	bool bDied;
 
 	ASWeapon* CurrentWeapon;
 
@@ -69,6 +77,10 @@ protected:
 	void StartFire();
 
 	void StopFire();
+
+	// Note to self: UFUNCTIONS allow functions to bind themselves to delegates
+	UFUNCTION()
+	void OnHealthChanged(USHealthComponent* HealthComp, float Health, float HealthDelta, const class UDamageType* DamageType, class AController* InstigatedBy, AActor* DamageCauser);
 
 public:	
 	// Called every frame
