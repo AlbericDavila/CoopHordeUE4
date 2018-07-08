@@ -67,6 +67,7 @@ protected:
 	UPROPERTY(BlueprintReadOnly, Category = "Player")
 	bool bDied;
 
+	UPROPERTY(Replicated)
 	ASWeapon* CurrentWeapon;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Player")
