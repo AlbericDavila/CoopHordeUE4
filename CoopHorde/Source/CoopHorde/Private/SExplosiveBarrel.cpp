@@ -4,6 +4,7 @@
 #include "SHealthComponent.h"
 #include "Kismet/GameplayStatics.h"
 #include "PhysicsEngine/RadialForceComponent.h"
+#include "Net/UnrealNetwork.h"
 
 
 // Sets default values
@@ -25,6 +26,9 @@ ASExplosiveBarrel::ASExplosiveBarrel()
 	RadialForceComp->bIgnoreOwningActor = true;
 
 	ExplosionImpulse = 475;
+
+	SetReplicates(true);
+	SetReplicateMovement(true);
 }
 
 
@@ -35,22 +39,36 @@ void ASExplosiveBarrel::OnHealthChanged(USHealthComponent* OwningHealthComp, flo
 		return;
 	}
 
-	if (Health <= 0)
+	if (Role == ROLE_Authority)
 	{
+		if (Health <= 0)
+		{
+			bExploded = true;
+			OnRep_Exploded();
 
-		bExploded = true;
+			// Boost barrel up into the air
+			FVector BoostIntensity = FVector::UpVector * ExplosionImpulse;
+			MeshComp->AddImpulse(BoostIntensity, NAME_None, true);
 
-		// Boost barrel up into the air
-		FVector BoostIntensity = FVector::UpVector * ExplosionImpulse;
-		MeshComp->AddImpulse(BoostIntensity, NAME_None, true);
-
-		// Play particles and change material
-		UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), ExplosionEffect, GetActorLocation());
-		MeshComp->SetMaterial(0, ExplodedMaterial);
-
-		// Activate radial impulse
-		RadialForceComp->FireImpulse();
-
+			// Activate radial impulse
+			RadialForceComp->FireImpulse();
+		}
 	}
 }
 
+
+void ASExplosiveBarrel::OnRep_Exploded()
+{
+	// Play particles and change material
+	UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), ExplosionEffect, GetActorLocation());
+	MeshComp->SetMaterial(0, ExplodedMaterial);
+}
+
+
+void ASExplosiveBarrel::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+	// Replicate to any relevant client connected to us
+	DOREPLIFETIME(ASExplosiveBarrel, bExploded);
+}

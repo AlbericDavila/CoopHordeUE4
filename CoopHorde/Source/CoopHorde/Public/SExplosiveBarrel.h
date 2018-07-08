@@ -41,6 +41,9 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "FX")
 	float ExplosionImpulse;
 
+	UPROPERTY(ReplicatedUsing=OnRep_Exploded)
 	bool bExploded;
 
+	UFUNCTION()
+	void OnRep_Exploded();
 };
