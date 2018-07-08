@@ -64,7 +64,7 @@ protected:
 	float DefaultFOV;
 
 	// Player died previously
-	UPROPERTY(BlueprintReadOnly, Category = "Player")
+	UPROPERTY(Replicated, BlueprintReadOnly, Category = "Player")
 	bool bDied;
 
 	UPROPERTY(Replicated)
