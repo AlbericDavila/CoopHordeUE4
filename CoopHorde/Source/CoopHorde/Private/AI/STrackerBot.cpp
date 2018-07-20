@@ -43,6 +43,8 @@ ASTrackerBot::ASTrackerBot()
 
 	ExplosionDamage = 40;
 	ExplosionRadius = 200;
+
+	SelfDamageInterval = 0.25f;
 }
 
 
@@ -51,8 +53,11 @@ void ASTrackerBot::BeginPlay()
 {
 	Super::BeginPlay();
 	
-	// Find initial path point to move to
-	NextPathPoint = GetNextPathPoint();
+	if (Role == ROLE_Authority)
+	{
+		// Find initial path point to move to
+		NextPathPoint = GetNextPathPoint();
+	}
 }
 
 
@@ -109,18 +114,24 @@ void ASTrackerBot::SelfDestruct()
 	// Spawn particles
 	UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), ExplosionEffect, GetActorLocation());
 
-	TArray<AActor*> IgnoredActors;
-	IgnoredActors.Add(this);
-
-	// Apply Damage
-	UGameplayStatics::ApplyRadialDamage(this, ExplosionDamage, GetActorLocation(), ExplosionRadius, nullptr, IgnoredActors, this, GetInstigatorController(), true);
-
-	DrawDebugSphere(GetWorld(), GetActorLocation(), ExplosionRadius, 12, FColor::Red, false, 2, 0, 1);
-
 	UGameplayStatics::PlaySoundAtLocation(this, ExplodeSound, GetActorLocation());
 
-	// Delete actor
-	Destroy();
+	MeshComp->SetVisibility(false, true);
+	MeshComp->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+
+	if (Role == ROLE_Authority)
+	{
+		TArray<AActor*> IgnoredActors;
+		IgnoredActors.Add(this);
+
+		// Apply Damage
+		UGameplayStatics::ApplyRadialDamage(this, ExplosionDamage, GetActorLocation(), ExplosionRadius, nullptr, IgnoredActors, this, GetInstigatorController(), true);
+
+		DrawDebugSphere(GetWorld(), GetActorLocation(), ExplosionRadius, 12, FColor::Red, false, 2, 0, 1);
+
+		// Delete actor
+		SetLifeSpan(2);
+	}
 }
 
 
@@ -135,43 +146,49 @@ void ASTrackerBot::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
-	float DistanceToTarget = (GetActorLocation() - NextPathPoint).Size();
-
-	if (DistanceToTarget <= RequiredDistanceToTarget)
+	if (Role == ROLE_Authority && !bExploded)
 	{
-		// Get next path point in navigation path to actor
-		NextPathPoint = GetNextPathPoint();
+		float DistanceToTarget = (GetActorLocation() - NextPathPoint).Size();
 
-		DrawDebugString(GetWorld(), GetActorLocation(), "Target Reached!");
+		if (DistanceToTarget <= RequiredDistanceToTarget)
+		{
+			// Get next path point in navigation path to actor
+			NextPathPoint = GetNextPathPoint();
+
+			DrawDebugString(GetWorld(), GetActorLocation(), "Target Reached!");
+		}
+		else
+		{
+			// Keep Tracker Bot moving until it reaches next path point
+			FVector ForceDirection = NextPathPoint - GetActorLocation();
+			ForceDirection.Normalize();
+
+			ForceDirection *= MovementForce;
+
+			MeshComp->AddForce(ForceDirection, NAME_None, bUseVelocityChange);
+
+			DrawDebugDirectionalArrow(GetWorld(), GetActorLocation(), GetActorLocation() + ForceDirection, 32, FColor::Yellow, false, 0, 1);
+		}
+
+		DrawDebugSphere(GetWorld(), NextPathPoint, 20, 12, FColor::Yellow, false, 0, 1);
 	}
-	else
-	{
-		// Keep Tracker Bot moving until it reaches next path point
-		FVector ForceDirection = NextPathPoint - GetActorLocation();
-		ForceDirection.Normalize();
-
-		ForceDirection *= MovementForce;
-
-		MeshComp->AddForce(ForceDirection, NAME_None, bUseVelocityChange);
-
-		DrawDebugDirectionalArrow(GetWorld(), GetActorLocation(), GetActorLocation() + ForceDirection, 32, FColor::Yellow, false, 0, 1);
-	}
-
-	DrawDebugSphere(GetWorld(), NextPathPoint, 20, 12, FColor::Yellow, false, 0, 1);
 }
 
 
 void ASTrackerBot::NotifyActorBeginOverlap(AActor* OtherActor)
 {
-	if (!bStratedSelfDestruct)
+	if (!bStratedSelfDestruct && !bExploded)
 	{
 		ASCharacter* PlayerPawn = Cast<ASCharacter>(OtherActor);
 		if (PlayerPawn)
 		{
 			// When overlapping with the player, do damage to self
 
-			// Start self destruct sequence
-			GetWorldTimerManager().SetTimer(TimerHandle_SelfDamage, this, &ASTrackerBot::DamageSelf, 0.5f, true, 0);
+			if (Role == ROLE_Authority)
+			{
+				// Start self destruct sequence
+				GetWorldTimerManager().SetTimer(TimerHandle_SelfDamage, this, &ASTrackerBot::DamageSelf, SelfDamageInterval, true, 0);
+			}
 
 			bStratedSelfDestruct = true;
 

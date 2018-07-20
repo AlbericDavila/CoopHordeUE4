@@ -69,6 +69,9 @@ protected:
 
 	FTimerHandle TimerHandle_SelfDamage;
 
+	UPROPERTY(EditDefaultsOnly, Category = "TrackerBot")
+	float SelfDamageInterval;
+
 	void DamageSelf();
 
 	UPROPERTY(EditDefaultsOnly, Category = "TrackerBot")
