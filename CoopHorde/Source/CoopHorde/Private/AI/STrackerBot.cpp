@@ -10,6 +10,7 @@
 #include "DrawDebugHelpers.h"
 #include "SCharacter.h"
 #include "Components/SphereComponent.h"
+#include "Sound/SoundCue.h"
 
 
 // Sets default values
@@ -116,6 +117,8 @@ void ASTrackerBot::SelfDestruct()
 
 	DrawDebugSphere(GetWorld(), GetActorLocation(), ExplosionRadius, 12, FColor::Red, false, 2, 0, 1);
 
+	UGameplayStatics::PlaySoundAtLocation(this, ExplodeSound, GetActorLocation());
+
 	// Delete actor
 	Destroy();
 }
@@ -171,6 +174,8 @@ void ASTrackerBot::NotifyActorBeginOverlap(AActor* OtherActor)
 			GetWorldTimerManager().SetTimer(TimerHandle_SelfDamage, this, &ASTrackerBot::DamageSelf, 0.5f, true, 0);
 
 			bStratedSelfDestruct = true;
+
+			UGameplayStatics::SpawnSoundAttached(SelfDestructSound, RootComponent);
 		}
 	}
 	
